@@ -1,0 +1,14 @@
+flat_raster_to_points.Rmd:
+  path: dev/flat_raster_to_points.Rmd
+  state: active
+  R: R/raster2points.R
+  tests: tests/testthat/test-raster2points.R
+  vignettes: vignettes/get-started.Rmd
+  inflate:
+    flat_file: dev/flat_raster_to_points.Rmd
+    vignette_name: Get started
+    open_vignette: true
+    check: true
+    document: true
+    overwrite: ask
+    clean: ask

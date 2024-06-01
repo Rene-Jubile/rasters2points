@@ -1,0 +1,208 @@
+---
+title: "flat_raster_to_points.Rmd for working package"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+<!-- 
+Run this 'development' chunk
+
+Store every call to library() that you need to run chunks line by line, as in a classical Rmd for analysis
+-->
+
+```{r development, include=FALSE}
+library(testthat)
+```
+
+<!--
+# Description of your package
+
+This will fill the description of your package.
+Fill and run the content of this chunk, before anything else. 
+
+Note: when you will use other flat templates, this part will be in a separate file. Do not be surprised!
+--> 
+
+```{r description, eval=FALSE}
+# Describe your package
+fusen::fill_description(
+  pkg = here::here(),
+  fields = list(
+    Title = "raster2points",
+    Description = " This function takes a raster file as input and generates a shapefile with points corresponding to the raster's pixel values.",
+    `Authors@R` = c(
+      person("MABILA", "Rene-Jubile", email = "jubile@mabilarene.tech", role = c("aut", "cre"), comment = c(ORCID = "0000-0000-0000-0000"))
+    )
+  )
+)
+# Define License with use_*_license()
+usethis::use_mit_license("John Doe")
+```
+
+# Add one to any value
+
+This is the first tool of our wonderful package. 
+You can add `1` to any `value` using function `add_one()`.
+
+<!-- 
+This first section shows:
+
+- the three parts necessary for a package: 'function', 'examples' and 'tests'.  
+  + Note that the three following chunks have names accordingly.
+
+-->
+
+```{r function-add_one}
+#' This function takes a raster file as input and generates a shapefile with points corresponding to the raster's pixel values.
+#'
+#' @param raster_path A character string specifying the path to the input raster file.
+#' @param shapefile_path A character string specifying the path to save the output shapefile.
+#' @importFrom raster raster xyFromCell getValues
+#' @importFrom sf st_as_sf st_write
+#' @importFrom sp coordinates proj4string
+#' @export
+
+raster2points <- function(raster_path, shapefile_path) {
+  # Charger les packages nécessaires
+  if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+  pacman::p_load("raster", "sf", "sp")
+  
+  # Vérifier que le fichier raster existe
+  if (!file.exists(raster_path)) {
+    stop("The raster file does not exist.")
+  }
+  
+  # Charger le raster
+  raster_layer <- raster(raster_path)
+  
+  # Obtenir les coordonnées des centres des pixels
+  coords <- xyFromCell(raster_layer, 1:ncell(raster_layer))
+  
+  # Extraire les valeurs des pixels
+  values <- getValues(raster_layer)
+  
+  # Créer un dataframe avec les coordonnées et les valeurs
+  points_df <- data.frame(coords, values)
+  
+  # Convertir le dataframe en SpatialPointsDataFrame
+  coordinates(points_df) <- ~ x + y
+  proj4string(points_df) <- crs(raster_layer)  # Assigner le CRS du raster au SpatialPointsDataFrame
+  
+  # Vérifier que le répertoire pour le shapefile existe
+  shapefile_dir <- dirname(shapefile_path)
+  if (!dir.exists(shapefile_dir)) {
+    stop("The directory for the shapefile does not exist.")
+  }
+  
+  # Sauvegarder la couche de points dans un fichier shapefile
+  shapefile(points_df, shapefile_path)
+}
+
+```
+
+<!--
+Here is an example on how to use the function.
+This should be a reproducible and working example
+-->
+
+```{r examples-add_one}
+# Créer un raster simple pour l'exemple
+
+library(raster)
+library(sf)
+library(sp)
+raster_path <- tempfile(fileext = ".tif")
+r <- raster(nrow = 10, ncol = 10, xmn = 0, xmx = 10, ymn = 0, ymx = 10)
+values(r) <- 1:ncell(r)
+writeRaster(r, raster_path, format = "GTiff", overwrite = TRUE)
+
+# Définir le chemin pour le shapefile de sortie
+shapefile_path <- tempfile(fileext = ".shp")
+
+# Utiliser la fonction pour créer le shapefile à partir du raster
+raster2points(raster_path, shapefile_path)
+
+# Charger le shapefile créé pour vérifier son contenu
+shapefile_points <- st_read(shapefile_path)
+
+# Afficher les premières lignes du shapefile pour vérifier
+print(head(shapefile_points))
+```
+
+<!--
+Here are some unit tests to verify the function works as expected.
+-->
+
+```{r tests-add_one}
+library(testthat)
+library(raster)
+library(sf)
+library(sp)
+
+test_that("create_shapefile_from_raster works correctly", {
+  # Créez un raster temporaire pour le test
+  raster_path <- tempfile(fileext = ".tif")
+  shapefile_path <- tempfile(fileext = ".shp")
+  
+  # Générer un raster simple pour les tests
+  r <- raster(nrow=10, ncol=10)
+  values(r) <- 1:ncell(r)
+  writeRaster(r, raster_path, format="GTiff", overwrite=TRUE)
+  
+  # Appeler la fonction pour créer le shapefile
+  raster2points(raster_path, shapefile_path)
+  
+  # Vérifiez que le shapefile a été créé
+  expect_true(file.exists(shapefile_path))
+  
+  # Charger le shapefile et vérifier son contenu
+  shapefile_points <- st_read(shapefile_path)
+  expect_equal(nrow(shapefile_points), ncell(r))
+  
+  # Vérifiez que les valeurs des pixels sont correctement attribuées aux points
+  raster_values <- getValues(r)
+  shapefile_values <- shapefile_points$values
+  expect_equal(raster_values, shapefile_values)
+})
+
+test_that("create_shapefile_from_raster handles errors gracefully", {
+  # Test avec un chemin raster incorrect
+  expect_error(
+    raster2points("non_existent_file.tif", tempfile(fileext = ".shp")),
+    "The raster file does not exist."
+  )
+  
+  # Test avec un chemin shapefile incorrect
+  raster_path <- tempfile(fileext = ".tif")
+  r <- raster(nrow=10, ncol=10)
+  values(r) <- 1:ncell(r)
+  writeRaster(r, raster_path, format="GTiff", overwrite=TRUE)
+  expect_error(
+    raster2points(raster_path, "/non_existent_directory/points.shp"),
+    "The directory for the shapefile does not exist."
+  )
+})
+```
+
+That's it ! This the end of the documented story of our package. All components are there.
+
+<!-- 
+# Inflate your package
+
+You're one inflate from paper to box.
+Build your package from this very Rmd using `fusen::inflate()` 
+-->
+
+
+```{r development-inflate, eval=FALSE}
+# Execute in the console directly
+fusen::inflate(flat_file = "dev/flat_raster_to_points.Rmd")
+```
+
+<!-- 
+- Verify your `"DESCRIPTION"` file has been updated
+- Verify your function is in `"R/"` directory
+- Verify your test is in `"tests/testthat/"` directory
+- Verify this Rmd appears in `"vignettes/"` directory 
+-->

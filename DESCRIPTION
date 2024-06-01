@@ -1,0 +1,27 @@
+Package: raster2points
+Title: Raster2points
+Version: 0.0.0.9000
+Authors@R: 
+    person("MABILA", "Rene-Jubile", , "jubile@mabilarene.tech", role = c("aut", "cre"),
+           comment = c(ORCID = "0000-0000-0000-0000"))
+Description: This function takes a raster file as input and generates a
+    shapefile with points corresponding to the raster's pixel values.
+License: MIT + file LICENSE
+URL: https://github.com/Rene-Jubile/raster2points
+BugReports: https://github.com/Rene-Jubile/raster2points/issues
+Imports: 
+    magrittr,
+    pacman,
+    raster,
+    sf,
+    sp
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat
+VignetteBuilder: 
+    knitr
+Config/fusen/version: 0.6.0.9000
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
